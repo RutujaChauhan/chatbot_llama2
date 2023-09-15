@@ -19,7 +19,7 @@ with st.sidebar:
         else:
             st.success("Proceed to entering your prompt message!", icon="👉")
 
-    uploaded_file = st.file_uploader("Choose your .pdf file", type="pdf")
+   
 
     # Refactored from https://github.com/a16z-infra/llama2-chatbot
     st.subheader("Models and parameters")
