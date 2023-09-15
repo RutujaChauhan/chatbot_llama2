@@ -1,55 +1,80 @@
 import streamlit as st
 import replicate
 import os
+import PyPDF2
+from docx import Document
 
 # App title
-st.set_page_config(page_title="🦙💬 Llama 2 Chatbot")
+st.set_page_config(page_title="🦙💬 File Chatbot")
 
 # Replicate Credentials
 with st.sidebar:
-    st.title('🦙💬 Llama 2 Chatbot')
+    st.title("🦙💬 File Chatbot")
     st.subheader(":orange[✏️Rutuja]")
-    if 'REPLICATE_API_TOKEN' in st.secrets:
-        st.success('API key already provided!', icon='✅')
-        replicate_api = st.secrets['REPLICATE_API_TOKEN']
+    if "REPLICATE_API_TOKEN" in st.secrets:
+        st.success("API key already provided!", icon="✅")
+        replicate_api = st.secrets["REPLICATE_API_TOKEN"]
     else:
-        replicate_api = st.text_input('Enter Replicate API token:', type='password')
-        if not (replicate_api.startswith('r8_') and len(replicate_api)==40):
-            st.warning('Please enter your credentials!', icon='⚠️')
+        replicate_api = st.text_input("Enter Replicate API token:", type="password")
+        if not (replicate_api.startswith("r8_") and len(replicate_api) == 40):
+            st.warning("Please enter your credentials!", icon="⚠️")
         else:
-            st.success('Proceed to entering your prompt message!', icon='👉')
-            
-    uploaded_file = st.file_uploader('Choose your .pdf file', type="pdf")
-    
+            st.success("Proceed to entering your prompt message!", icon="👉")
+
+    uploaded_file = st.file_uploader(
+        "Upload a PDF or Word document", type=["pdf", "docx"]
+    )
+
     # Refactored from https://github.com/a16z-infra/llama2-chatbot
-    st.subheader('Models and parameters')
-    selected_model = st.sidebar.selectbox('Choose a Llama2 model', ['Llama2-7B', 'Llama2-13B', 'Llama2-70B'], key='selected_model')
-    if selected_model == 'Llama2-7B':
-        llm = 'a16z-infra/llama7b-v2-chat:4f0a4744c7295c024a1de15e1a63c880d3da035fa1f49bfd344fe076074c8eea'
-    elif selected_model == 'Llama2-13B':
-        llm = 'a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5'
+    st.subheader("Models and parameters")
+    selected_model = st.sidebar.selectbox(
+        "Choose a Llama2 model",
+        ["Llama2-7B", "Llama2-13B", "Llama2-70B"],
+        key="selected_model",
+    )
+    if selected_model == "Llama2-7B":
+        llm = "a16z-infra/llama7b-v2-chat:4f0a4744c7295c024a1de15e1a63c880d3da035fa1f49bfd344fe076074c8eea"
+    elif selected_model == "Llama2-13B":
+        llm = "a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5"
     else:
-        llm = 'replicate/llama70b-v2-chat:e951f18578850b652510200860fc4ea62b3b16fac280f83ff32282f87bbd2e48'
-    
-    temperature = st.sidebar.slider('temperature', min_value=0.01, max_value=5.0, value=0.1, step=0.01)
-    top_p = st.sidebar.slider('top_p', min_value=0.01, max_value=1.0, value=0.9, step=0.01)
-    max_length = st.sidebar.slider('max_length', min_value=64, max_value=4096, value=512, step=8)
-    
-    st.markdown('📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-a-llama-2-chatbot/)!')
-os.environ['REPLICATE_API_TOKEN'] = replicate_api
+        llm = "replicate/llama70b-v2-chat:e951f18578850b652510200860fc4ea62b3b16fac280f83ff32282f87bbd2e48"
+
+    temperature = st.sidebar.slider(
+        "temperature", min_value=0.01, max_value=5.0, value=0.1, step=0.01
+    )
+    top_p = st.sidebar.slider(
+        "top_p", min_value=0.01, max_value=1.0, value=0.9, step=0.01
+    )
+    max_length = st.sidebar.slider(
+        "max_length", min_value=64, max_value=4096, value=512, step=8
+    )
+
+    st.markdown(
+        "📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-a-llama-2-chatbot/)!"
+    )
+
+os.environ["REPLICATE_API_TOKEN"] = replicate_api
 
 # Store LLM generated responses
 if "messages" not in st.session_state.keys():
-    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+    st.session_state.messages = [
+        {"role": "assistant", "content": "How may I assist you today?"}
+    ]
 
 # Display or clear chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+
 def clear_chat_history():
-    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
-st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
+    st.session_state.messages = [
+        {"role": "assistant", "content": "How may I assist you today?"}
+    ]
+
+
+st.sidebar.button("Clear Chat History", on_click=clear_chat_history)
+
 
 # Function for generating LLaMA2 response
 def generate_llama2_response(prompt_input):
@@ -59,10 +84,18 @@ def generate_llama2_response(prompt_input):
             string_dialogue += "User: " + dict_message["content"] + "\n\n"
         else:
             string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
-    output = replicate.run(llm, 
-                           input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ",
-                                  "temperature":temperature, "top_p":top_p, "max_length":max_length, "repetition_penalty":1})
+    output = replicate.run(
+        llm,
+        input={
+            "prompt": f"{string_dialogue} {prompt_input} Assistant: ",
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_length": max_length,
+            "repetition_penalty": 1,
+        },
+    )
     return output
+
 
 # User-provided prompt
 if prompt := st.chat_input(disabled=not replicate_api):
@@ -76,10 +109,51 @@ if st.session_state.messages[-1]["role"] != "assistant":
         with st.spinner("Thinking..."):
             response = generate_llama2_response(prompt)
             placeholder = st.empty()
-            full_response = ''
+            full_response = ""
             for item in response:
                 full_response += item
                 placeholder.markdown(full_response)
             placeholder.markdown(full_response)
-    message = {"role": "assistant", "content": full_response}
-    st.session_state.messages.append(message)
+
+# Handle uploaded files
+if uploaded_file is not None:
+    with st.spinner("Processing uploaded file..."):
+        if uploaded_file.type == "application/pdf":
+            # Handle PDF files
+            pdf_reader = PyPDF2.PdfFileReader(uploaded_file)
+            pdf_text = ""
+            for page_num in range(pdf_reader.getNumPages()):
+                page = pdf_reader.getPage(page_num)
+                pdf_text += page.extractText()
+
+            st.session_state.messages.append(
+                {"role": "user", "content": "I've uploaded a PDF file."}
+            )
+            with st.chat_message("user"):
+                st.write("I've uploaded a PDF file.")
+
+            pdf_response = generate_llama2_response(pdf_text)
+            for item in pdf_response:
+                st.session_state.messages.append({"role": "assistant", "content": item})
+                with st.chat_message("assistant"):
+                    st.write(item)
+
+        elif (
+            uploaded_file.type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ):
+            # Handle Word files (docx)
+            doc = Document(uploaded_file)
+            doc_text = " ".join([p.text for p in doc.paragraphs])
+
+            st.session_state.messages.append(
+                {"role": "user", "content": "I've uploaded a Word document."}
+            )
+            with st.chat_message("user"):
+                st.write("I've uploaded a Word document.")
+
+            doc_response = generate_llama2_response(doc_text)
+            for item in doc_response:
+                st.session_state.messages.append({"role": "assistant", "content": item})
+                with st.chat_message("assistant"):
+                    st.write(item)
