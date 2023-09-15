@@ -1,7 +1,7 @@
 import streamlit as st
 import replicate
 import os
-import PyPDF2
+import fitz
 from docx import Document
 
 # App title
