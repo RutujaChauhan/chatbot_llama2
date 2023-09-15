@@ -115,20 +115,20 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 placeholder.markdown(full_response)
             placeholder.markdown(full_response)
 
+
 # Handle uploaded files
 if uploaded_file is not None:
     with st.spinner("Processing uploaded file..."):
         if uploaded_file.type == "application/pdf":
-            # Handle PDF files
-            pdf_reader = PyPDF2.PdfFileReader(uploaded_file)
+            # Handle PDF files using PyMuPDF (Fitz)
             pdf_text = ""
-            for page_num in range(pdf_reader.getNumPages()):
-                page = pdf_reader.getPage(page_num)
-                pdf_text += page.extractText()
+            with fitz.open(stream=uploaded_file.read(), filetype="pdf") as pdf_doc:
+                num_pages = pdf_doc.page_count
+                for page_num in range(num_pages):
+                    page = pdf_doc[page_num]
+                    pdf_text += page.get_text()
 
-            st.session_state.messages.append(
-                {"role": "user", "content": "I've uploaded a PDF file."}
-            )
+            st.session_state.messages.append({"role": "user", "content": "I've uploaded a PDF file."})
             with st.chat_message("user"):
                 st.write("I've uploaded a PDF file.")
 
@@ -138,17 +138,12 @@ if uploaded_file is not None:
                 with st.chat_message("assistant"):
                     st.write(item)
 
-        elif (
-            uploaded_file.type
-            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ):
+        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             # Handle Word files (docx)
             doc = Document(uploaded_file)
             doc_text = " ".join([p.text for p in doc.paragraphs])
 
-            st.session_state.messages.append(
-                {"role": "user", "content": "I've uploaded a Word document."}
-            )
+            st.session_state.messages.append({"role": "user", "content": "I've uploaded a Word document."})
             with st.chat_message("user"):
                 st.write("I've uploaded a Word document.")
 
@@ -157,3 +152,4 @@ if uploaded_file is not None:
                 st.session_state.messages.append({"role": "assistant", "content": item})
                 with st.chat_message("assistant"):
                     st.write(item)
+
