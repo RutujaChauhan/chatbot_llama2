@@ -1,15 +1,13 @@
 import streamlit as st
 import replicate
 import os
-import PyPDF2
-from docx import Document
 
 # App title
-st.set_page_config(page_title="🦙💬 File Chatbot")
+st.set_page_config(page_title="🦙💬 Llama 2 Chatbot")
 
 # Replicate Credentials
 with st.sidebar:
-    st.title("🦙💬 File Chatbot")
+    st.title("🦙💬 Llama 2 Chatbot")
     st.subheader(":orange[✏️Rutuja]")
     if "REPLICATE_API_TOKEN" in st.secrets:
         st.success("API key already provided!", icon="✅")
@@ -21,9 +19,7 @@ with st.sidebar:
         else:
             st.success("Proceed to entering your prompt message!", icon="👉")
 
-    uploaded_file = st.file_uploader(
-        "Upload a PDF or Word document", type=["pdf", "docx"]
-    )
+    uploaded_file = st.file_uploader("Choose your .pdf file", type="pdf")
 
     # Refactored from https://github.com/a16z-infra/llama2-chatbot
     st.subheader("Models and parameters")
@@ -52,7 +48,6 @@ with st.sidebar:
     st.markdown(
         "📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-a-llama-2-chatbot/)!"
     )
-
 os.environ["REPLICATE_API_TOKEN"] = replicate_api
 
 # Store LLM generated responses
@@ -114,46 +109,5 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 full_response += item
                 placeholder.markdown(full_response)
             placeholder.markdown(full_response)
-
-# Handle uploaded files
-if uploaded_file is not None:
-    with st.spinner("Processing uploaded file..."):
-        if uploaded_file.type == "application/pdf":
-            # Handle PDF files
-            pdf_reader = PyPDF2.PdfFileReader(uploaded_file)
-            pdf_text = ""
-            for page_num in range(pdf_reader.getNumPages()):
-                page = pdf_reader.getPage(page_num)
-                pdf_text += page.extractText()
-
-            st.session_state.messages.append(
-                {"role": "user", "content": "I've uploaded a PDF file."}
-            )
-            with st.chat_message("user"):
-                st.write("I've uploaded a PDF file.")
-
-            pdf_response = generate_llama2_response(pdf_text)
-            for item in pdf_response:
-                st.session_state.messages.append({"role": "assistant", "content": item})
-                with st.chat_message("assistant"):
-                    st.write(item)
-
-        elif (
-            uploaded_file.type
-            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ):
-            # Handle Word files (docx)
-            doc = Document(uploaded_file)
-            doc_text = " ".join([p.text for p in doc.paragraphs])
-
-            st.session_state.messages.append(
-                {"role": "user", "content": "I've uploaded a Word document."}
-            )
-            with st.chat_message("user"):
-                st.write("I've uploaded a Word document.")
-
-            doc_response = generate_llama2_response(doc_text)
-            for item in doc_response:
-                st.session_state.messages.append({"role": "assistant", "content": item})
-                with st.chat_message("assistant"):
-                    st.write(item)
+    message = {"role": "assistant", "content": full_response}
+    st.session_state.messages.append(message)
