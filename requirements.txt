@@ -1,3 +1,4 @@
 streamlit
 replicate
 python-docx
+PyMuPDF
